@@ -55,8 +55,14 @@ _get_var() {
         local home=$HOME
         [ -n "$SUDO_USER" ] && home=$(awk -F: -v user="$SUDO_USER" '$1==user{print $6}' /etc/passwd)
 
-        BASH_RC_ROOT='/root/.bashrc'
-        BASH_RC_USER="${home}/.bashrc"
+        # 检测shell类型并设置对应的rc文件
+        if [ -n "$ZSH_VERSION" ]; then
+            BASH_RC_ROOT='/root/.zshrc'
+            BASH_RC_USER="${home}/.zshrc"
+        else
+            BASH_RC_ROOT='/root/.bashrc'
+            BASH_RC_USER="${home}/.bashrc"
+        fi
     }
     # 内核bin路径
     {
@@ -207,7 +213,12 @@ function _is_root() {
 
 function _valid_env() {
     _is_root || _error_quit "需要 root 或 sudo 权限执行"
-    [ "$(ps -p $$ -o comm=)" != "bash" ] && _error_quit "当前终端不是 bash"
+    # 检测当前shell
+    if [ -n "$BASH_VERSION" ] || [ -n "$ZSH_VERSION" ]; then
+        : # 空操作，表示条件满足
+    else
+        _error_quit "当前终端不是 bash 或 zsh"
+    fi
     [ "$(ps -p 1 -o comm=)" != "systemd" ] && _error_quit "系统不具备 systemd"
 }
 

@@ -1,10 +1,10 @@
 #!/bin/bash
 # shellcheck disable=SC2155
 
-function clashon() {
+function _clash_on() {
     _get_kernel_port
     sudo systemctl start "$BIN_KERNEL_NAME" && _okcat '已开启代理环境' ||
-        _failcat '启动失败: 执行 "clashstatus" 查看日志' || return 1
+        _failcat '启动失败: 执行 "clash status" 查看日志' || return 1
 
     local http_proxy_addr="http://127.0.0.1:${MIXED_PORT}"
     local socks_proxy_addr="socks5://127.0.0.1:${MIXED_PORT}"
@@ -23,12 +23,12 @@ function clashon() {
 }
 
 systemctl is-active "$BIN_KERNEL_NAME" >&/dev/null && [ -z "$http_proxy" ] && {
-    _is_root || _failcat '当前 shell 未检测到代理变量，需执行 clashon 开启代理环境' && clashon
+    _is_root || _failcat '当前 shell 未检测到代理变量，需执行 clash on 开启代理环境' && _clash_on
 }
 
-function clashoff() {
+function _clash_off() {
     sudo systemctl stop "$BIN_KERNEL_NAME" && _okcat '已关闭代理环境' ||
-        _failcat '关闭失败: 执行 "clashstatus" 查看日志' || return 1
+        _failcat '关闭失败: 执行 "clash status" 查看日志' || return 1
 
     unset http_proxy
     unset https_proxy
@@ -40,17 +40,17 @@ function clashoff() {
     unset NO_PROXY
 }
 
-clashrestart() {
-    { clashoff && clashon; } >&/dev/null
+_clash_restart() {
+    { _clash_off && _clash_on; } >&/dev/null
 }
 
-clashstatus() {
-    sudo systemctl status "$BIN_KERNEL_NAME" "$@"
+_clash_status() {
+    sudo systemctl status "$BIN_KERNEL_NAME"
 }
 
-function clashui() {
+function _clash_ui() {
     # 防止tun模式强制走代理获取不到真实公网ip
-    clashoff >&/dev/null
+    _clash_off >&/dev/null
     _get_kernel_port
     # 公网ip
     # ifconfig.me
@@ -73,15 +73,15 @@ function clashui() {
     printf "║                                               ║\n"
     printf "╚═══════════════════════════════════════════════╝\n"
     printf "\n"
-    clashon >&/dev/null
+    _clash_on >&/dev/null
 }
 
 _merge_config_restart() {
     _valid_config "$CLASH_CONFIG_MIXIN" || _error_quit "验证失败：请检查 Mixin 配置"
-    sudo "$BIN_YQ" -n "load(\"$CLASH_CONFIG_RAW\") * load(\"$CLASH_CONFIG_MIXIN\")" | sudo tee "$CLASH_CONFIG_RUNTIME" >&/dev/null && clashrestart
+    sudo "$BIN_YQ" -n "load(\"$CLASH_CONFIG_RAW\") * load(\"$CLASH_CONFIG_MIXIN\")" | sudo tee "$CLASH_CONFIG_RUNTIME" >&/dev/null && _clash_restart
 }
 
-function clashsecret() {
+function _clash_secret() {
     case "$#" in
     0)
         _okcat "当前密钥：$(sudo "$BIN_YQ" '.secret // ""' "$CLASH_CONFIG_RUNTIME")"
@@ -101,9 +101,9 @@ function clashsecret() {
 }
 
 _tunstatus() {
-    local status=$(sudo "$BIN_YQ" '.tun.enable' "${CLASH_CONFIG_RUNTIME}")
+    local tun_status=$(sudo "$BIN_YQ" '.tun.enable' "${CLASH_CONFIG_RUNTIME}")
     # shellcheck disable=SC2015
-    [ "$status" = 'true' ] && _okcat 'Tun 状态：启用' || _failcat 'Tun 状态：关闭'
+    [ "$tun_status" = 'true' ] && _okcat 'Tun 状态：启用' || _failcat 'Tun 状态：关闭'
 }
 
 _tunoff() {
@@ -124,7 +124,7 @@ _tunon() {
     _okcat "Tun 模式已开启"
 }
 
-function clashtun() {
+function _clash_tun() {
     case "$1" in
     on)
         _tunon
@@ -138,7 +138,7 @@ function clashtun() {
     esac
 }
 
-function clashupdate() {
+function _clash_update() {
     local url=$(cat "$CLASH_CONFIG_URL")
     local is_auto
 
@@ -164,7 +164,9 @@ function clashupdate() {
 
     # 如果是自动更新模式，则设置定时任务
     [ "$is_auto" = true ] && {
-        sudo grep -qs 'clashupdate' "$CLASH_CRON_TAB" || echo "0 0 */2 * * . $BASH_RC_ROOT;clashupdate $url" | sudo tee -a "$CLASH_CRON_TAB" >&/dev/null
+        # 检测shell类型并设置对应的rc文件路径
+        local rc_file="$BASH_RC_ROOT"
+        sudo grep -qs 'clash update' "$CLASH_CRON_TAB" || echo "0 0 */2 * * . $rc_file;clash update $url" | sudo tee -a "$CLASH_CRON_TAB" >&/dev/null
         _okcat "定时任务设置成功" && return 0
     }
 
@@ -186,7 +188,7 @@ function clashupdate() {
     _okcat '✅' "[$(date +"%Y-%m-%d %H:%M:%S")] 订阅更新成功：$url" | sudo tee -a "${CLASH_UPDATE_LOG}" >&/dev/null
 }
 
-function clashmixin() {
+function _clash_mixin() {
     case "$1" in
     -e)
         sudo vim "$CLASH_CONFIG_MIXIN" && {
@@ -203,6 +205,41 @@ function clashmixin() {
 }
 
 function clash() {
+    case "$1" in
+    on)
+        _clash_on
+        return
+        ;;
+    off)
+        _clash_off
+        return
+        ;;
+    ui)
+        _clash_ui
+        return
+        ;;
+    status)
+        _clash_status "$2"
+        return
+        ;;
+    tun)
+        _clash_tun "$2"
+        return
+        ;;
+    mixin)
+        _clash_mixin "$2"
+        return
+        ;;
+    secret)
+        _clash_secret "$2"
+        return
+        ;;
+    update)
+        _clash_update "$2" "$3"
+        return
+        ;;
+    esac
+
     local color=#c8d6e5
     local prefix=$(_get_color "$color")
     local suffix=$(printf '\033[0m')
@@ -210,14 +247,14 @@ function clash() {
         cat <<EOF | column -t -s ',' | sed -E "/clash/ s|(clash)(\w*)|\1${prefix}\2${suffix}|g"
 Usage:
     clash                    命令一览,
-    clashon                  开启代理,
-    clashoff                 关闭代理,
-    clashui                  面板地址,
-    clashstatus              内核状况,
-    clashtun     [on|off]    Tun 模式,
-    clashmixin   [-e|-r]     Mixin 配置,
-    clashsecret  [secret]    Web 密钥,
-    clashupdate  [auto|log]  更新订阅,
+    clash on                 开启代理,
+    clash off                关闭代理,
+    clash ui                 面板地址,
+    clash status             内核状况,
+    clash tun     [on|off]   Tun 模式,
+    clash mixin   [-e|-r]    Mixin 配置,
+    clash secret  [secret]   Web 密钥,
+    clash update  [auto|log] 更新订阅,
 EOF
     )"
 }

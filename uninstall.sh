@@ -15,4 +15,9 @@ rm -rf "$CLASH_BASE_DIR"
 _set_rc unset
 _okcat '✨' '已卸载，相关配置已清除'
 # 未 export 的变量和函数不会被继承
-exec bash
+# 检测当前shell类型并执行对应的shell
+if [ -n "$ZSH_VERSION" ]; then
+  exec zsh
+else
+  exec bash
+fi

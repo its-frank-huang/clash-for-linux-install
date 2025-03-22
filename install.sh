@@ -3,6 +3,7 @@
 . script/common.sh
 . script/clashctl.sh
 
+# 修改_valid_env函数调用，允许在zsh中运行
 _valid_env
 
 [ -d "$CLASH_BASE_DIR" ] && _error_quit "请先执行卸载脚本,以清除安装路径：$CLASH_BASE_DIR"
@@ -56,6 +57,7 @@ EOF
 systemctl daemon-reload
 systemctl enable "$BIN_KERNEL_NAME" >&/dev/null || _failcat '💥' "设置自启失败" && _okcat '🚀' "已设置开机自启"
 
-clashon && _okcat '🎉' 'enjoy 🎉'
-clashui
+source /opt/clash/script/common.sh && source /opt/clash/script/clashctl.sh
+clash on && _okcat '🎉' 'enjoy 🎉'
+clash ui
 clash
