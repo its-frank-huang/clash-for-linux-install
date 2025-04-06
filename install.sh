@@ -50,7 +50,16 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable "$BIN_KERNEL_NAME" >&/dev/null || _failcat '💥' "设置自启失败" && _okcat '🚀' "已设置开机自启"
+# Ask the user about enabling auto-start
+read -p "$(_okcat '⚙️ ' 'Enable automatic startup on login? (y/N): ')" -n 1 -r enable_auto_start
+echo # Move to a new line after user input
+
+# Conditionally enable the service based on user input
+if [[ "$enable_auto_start" =~ ^[Yy]$ ]]; then
+    systemctl enable "$BIN_KERNEL_NAME" >&/dev/null || _failcat '💥' "设置自启失败" && _okcat '🚀' "已设置开机自启"
+else
+    _okcat 'ℹ️' "自动启动未设置. 您可以稍后手动启用: sudo systemctl enable $BIN_KERNEL_NAME"
+fi
 
 source /opt/clash/script/common.sh && source /opt/clash/script/clashctl.sh
 clash on && _okcat '🎉' 'enjoy 🎉'
