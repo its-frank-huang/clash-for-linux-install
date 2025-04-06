@@ -204,6 +204,43 @@ function _clash_mixin() {
     esac
 }
 
+# Function to manage systemd service autostart
+function _clash_autostart() {
+    # Check current status if no argument or invalid argument is given
+    if [ -z "$1" ] || [[ "$1" != "on" && "$1" != "off" ]]; then
+        if systemctl is-enabled "$BIN_KERNEL_NAME" --quiet; then
+            _okcat '✅' "Autostart is currently ENABLED for $BIN_KERNEL_NAME."
+        else
+            # Check if the service exists but is disabled, or doesn't exist
+            if systemctl list-unit-files | grep -q "^${BIN_KERNEL_NAME}.service"; then
+                _okcat '❌' "Autostart is currently DISABLED for $BIN_KERNEL_NAME."
+            else
+                _failcat '❓' "Service $BIN_KERNEL_NAME not found or not installed correctly."
+            fi
+        fi
+        _okcat 'ℹ️' "Usage: clash autostart [on|off]"
+        return 0
+    fi
+
+    if [ "$1" = "on" ]; then
+        _okcat '⏳' "Enabling autostart for $BIN_KERNEL_NAME..."
+        if sudo systemctl enable "$BIN_KERNEL_NAME"; then
+            _okcat '🚀' "Autostart enabled for $BIN_KERNEL_NAME."
+        else
+            _failcat '💥' "Failed to enable autostart for $BIN_KERNEL_NAME. Check permissions or service status."
+            return 1
+        fi
+    elif [ "$1" = "off" ]; then
+        _okcat '⏳' "Disabling autostart for $BIN_KERNEL_NAME..."
+        if sudo systemctl disable "$BIN_KERNEL_NAME"; then
+            _okcat '🛑' "Autostart disabled for $BIN_KERNEL_NAME."
+        else
+            _failcat '💥' "Failed to disable autostart for $BIN_KERNEL_NAME. Check permissions or service status."
+            return 1
+        fi
+    fi
+}
+
 function clash() {
     case "$1" in
     on)
@@ -238,6 +275,10 @@ function clash() {
         _clash_update "$2" "$3"
         return
         ;;
+    autostart)
+        _clash_autostart "$2"
+        return
+        ;;
     esac
 
     local color=#c8d6e5
@@ -249,6 +290,7 @@ Usage:
     clash                    命令一览,
     clash on                 开启代理,
     clash off                关闭代理,
+    clash autostart [on|off] 管理服务自启,
     clash ui                 面板地址,
     clash status             内核状况,
     clash tun     [on|off]   Tun 模式,
