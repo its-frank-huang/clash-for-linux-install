@@ -13,9 +13,9 @@ systemctl daemon-reload
 
 rm -rf "$CLASH_BASE_DIR"
 _set_rc unset
-_okcat '✨' '已卸载，相关配置已清除'
-# 未 export 的变量和函数不会被继承
-# 检测当前shell类型并执行对应的shell
+_okcat '✨' 'Uninstalled, related configurations have been cleared'
+# Variables and functions that are not exported will not be inherited
+# Detect current shell type and execute corresponding shell
 if [ -n "$ZSH_VERSION" ]; then
   exec zsh
 else

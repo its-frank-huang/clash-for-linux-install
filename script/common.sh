@@ -31,7 +31,7 @@ CLASH_CONFIG_RUNTIME="${CLASH_BASE_DIR}/runtime.yaml"
 CLASH_UPDATE_LOG="${CLASH_BASE_DIR}/clashupdate.log"
 
 _set_var() {
-    # 定时任务路径
+    # Scheduled task path
     {
         local os_info=$(cat /etc/os-release)
         echo "$os_info" | grep -iqsE "rhel|centos" && {
@@ -41,12 +41,12 @@ _set_var() {
             CLASH_CRON_TAB="/var/spool/cron/crontabs/root"
         }
     }
-    # rc文件路径
+    # rc file path
     {
         local home=$HOME
         [ -n "$SUDO_USER" ] && home=$(awk -F: -v user="$SUDO_USER" '$1==user{print $6}' /etc/passwd)
 
-        # 检测shell类型并设置对应的rc文件
+        # Detect shell type and set corresponding rc file
         if [ -n "$ZSH_VERSION" ]; then
             BASH_RC_ROOT='/root/.zshrc'
             BASH_RC_USER="${home}/.zshrc"
@@ -97,8 +97,8 @@ _set_rc() {
         tee -a $BASH_RC_ROOT $BASH_RC_USER >&/dev/null
 }
 
-# 默认集成、安装mihomo内核
-# 移除/删除mihomo：下载安装clash内核
+# Default integration, install mihomo kernel
+# Remove/delete mihomo: download and install clash kernel
 # shellcheck disable=SC2086
 function _get_kernel() {
     [ -f $ZIP_CLASH ] && {
@@ -113,14 +113,14 @@ function _get_kernel() {
 
     [ ! -f $ZIP_MIHOMO ] && [ ! -f $ZIP_CLASH ] && {
         local arch=$(uname -m)
-        _failcat "${ZIP_BASE_DIR}：未检测到可用的内核压缩包"
+        _failcat "${ZIP_BASE_DIR}: No available kernel package detected"
         _download_clash "$arch"
         ZIP_KERNEL=$ZIP_CLASH
         BIN_KERNEL=$BIN_CLASH
     }
 
     BIN_KERNEL_NAME=$(basename "$BIN_KERNEL")
-    _okcat "安装内核：$BIN_KERNEL_NAME"
+    _okcat "Installing kernel: $BIN_KERNEL_NAME"
 }
 
 _get_random_port() {
@@ -137,13 +137,13 @@ function _get_kernel_port() {
     MIXED_PORT=${mixed_port:-7890}
     UI_PORT=${ext_port:-9090}
 
-    # 端口占用场景
+    # Port occupation scenario
     local port
     for port in $MIXED_PORT $UI_PORT; do
         _is_already_in_use "$port" "$BIN_KERNEL_NAME" && {
             [ "$port" = "$MIXED_PORT" ] && {
                 local newPort=$(_get_random_port)
-                local msg="端口占用：${MIXED_PORT} 🎲 随机分配：$newPort"
+                local msg="Port occupied: ${MIXED_PORT} 🎲 Random assignment: $newPort"
                 sudo "$BIN_YQ" -i ".mixed-port = $newPort" $CLASH_CONFIG_RUNTIME
                 MIXED_PORT=$newPort
                 _failcat '🎯' "$msg"
@@ -151,7 +151,7 @@ function _get_kernel_port() {
             }
             [ "$port" = "$UI_PORT" ] && {
                 newPort=$(_get_random_port)
-                msg="端口占用：${UI_PORT} 🎲 随机分配：$newPort"
+                msg="Port occupied: ${UI_PORT} 🎲 Random assignment: $newPort"
                 sudo "$BIN_YQ" -i ".external-controller = \"0.0.0.0:$newPort\"" $CLASH_CONFIG_RUNTIME
                 UI_PORT=$newPort
                 _failcat '🎯' "$msg"
@@ -217,14 +217,14 @@ function _is_root() {
 }
 
 function _valid_env() {
-    _is_root || _error_quit "需要 root 或 sudo 权限执行"
-    # 检测当前shell
+    _is_root || _error_quit "Root or sudo privileges required"
+    # Detect current shell
     if [ -n "$BASH_VERSION" ] || [ -n "$ZSH_VERSION" ]; then
-        : # 空操作，表示条件满足
+        : # No operation, condition satisfied
     else
-        _error_quit "当前终端不是 bash 或 zsh"
+        _error_quit "Current terminal is not bash or zsh"
     fi
-    [ "$(ps -p 1 -o comm=)" != "systemd" ] && _error_quit "系统不具备 systemd"
+    [ "$(ps -p 1 -o comm=)" != "systemd" ] && _error_quit "System does not have systemd"
 }
 
 function _valid_config() {
@@ -233,7 +233,7 @@ function _valid_config() {
         local fail_msg
         fail_msg=$($test_cmd) || {
             $test_cmd
-            echo "$fail_msg" | grep -qs "unsupport proxy type" && _error_quit "不支持的代理协议，请安装 mihomo 内核"
+            echo "$fail_msg" | grep -qs "unsupport proxy type" && _error_quit "Unsupported proxy protocol, please install mihomo kernel"
         }
     }
 }
@@ -259,11 +259,11 @@ _download_clash() {
         sha256sum='c45b39bb241e270ae5f4498e2af75cecc0f03c9db3c0db5e55c8c4919f01afdd'
         ;;
     *)
-        _error_quit "未知的架构版本：$arch，请自行下载对应版本至 ${ZIP_BASE_DIR} 目录下：https://downloads.clash.wiki/ClashPremium/"
+        _error_quit "Unknown architecture version: $arch, please download the corresponding version to ${ZIP_BASE_DIR} directory: https://downloads.clash.wiki/ClashPremium/"
         ;;
     esac
 
-    _okcat '⏳' "正在下载：clash：${arch} 架构..."
+    _okcat '⏳' "Downloading: clash: ${arch} architecture..."
     local clash_zip="${ZIP_BASE_DIR}/$(basename $url)"
     curl \
         --progress-bar \
@@ -275,7 +275,7 @@ _download_clash() {
         --output "$clash_zip" \
         "$url"
     echo $sha256sum "$clash_zip" | sha256sum -c ||
-        _error_quit "下载失败：请自行下载对应版本至 ${ZIP_BASE_DIR} 目录下：https://downloads.clash.wiki/ClashPremium/"
+        _error_quit "Download failed: Please download the corresponding version to ${ZIP_BASE_DIR} directory: https://downloads.clash.wiki/ClashPremium/"
 }
 
 function _download_config() {
@@ -324,17 +324,17 @@ function _download_config() {
     local url=$2
     [ "${url:0:4}" = 'file' ] && return 0
     _download_raw_config "$dest" "$url" || return 1
-    _okcat '🍃' '下载成功：内核验证配置...'
+    _okcat '🍃' 'Download successful: Kernel validating configuration...'
     _valid_config "$dest" || {
-        _failcat '🍂' "验证失败：尝试订阅转换..."
-        _download_convert_config "$dest" "$url" || _failcat '🍂' "转换失败：请检查日志：$BIN_SUBCONVERTER_LOG"
+        _failcat '🍂' "Validation failed: Attempting subscription conversion..."
+        _download_convert_config "$dest" "$url" || _failcat '🍂' "Conversion failed: Please check log: $BIN_SUBCONVERTER_LOG"
     }
 }
 
 _start_convert() {
     _is_already_in_use $BIN_SUBCONVERTER_PORT 'subconverter' && {
         local newPort=$(_get_random_port)
-        _failcat '🎯' "端口占用：$BIN_SUBCONVERTER_PORT 🎲 随机分配：$newPort"
+        _failcat '🎯' "Port occupied: $BIN_SUBCONVERTER_PORT 🎲 Random assignment: $newPort"
         [ ! -e "$BIN_SUBCONVERTER_CONFIG" ] && {
             sudo /bin/mv -f "$BIN_SUBCONVERTER_DIR/pref.example.yml" "$BIN_SUBCONVERTER_CONFIG"
         }
@@ -342,12 +342,12 @@ _start_convert() {
         BIN_SUBCONVERTER_PORT=$newPort
     }
     local start=$(date +%s)
-    # 子shell运行，屏蔽kill时的输出
+    # Run in subshell to suppress kill output
     (sudo "$BIN_SUBCONVERTER" 2>&1 | sudo tee "$BIN_SUBCONVERTER_LOG" >/dev/null &)
     while ! _is_bind "$BIN_SUBCONVERTER_PORT" >&/dev/null; do
         sleep 0.05s
         local now=$(date +%s)
-        [ $((now - start)) -gt 1 ] && _error_quit "订阅转换服务未启动，请检查日志：$BIN_SUBCONVERTER_LOG"
+        [ $((now - start)) -gt 1 ] && _error_quit "Subscription conversion service not started, please check log: $BIN_SUBCONVERTER_LOG"
     done
 }
 _stop_convert() {

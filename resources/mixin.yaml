@@ -1,9 +1,9 @@
-# Web 控制台配置
+# Web Console Configuration
 external-controller: '0.0.0.0:9090'
 external-ui: public
-secret: 
+secret:
 
-# tun 配置
+# tun Configuration
 tun:
   enable: false
   stack: system
@@ -17,9 +17,9 @@ tun:
   strict-route: true
   exclude-interface:
     - docker0
-    - podman0 
+    - podman0
 
-# DNS 配置
+# DNS Configuration
 dns:
   enable: true
   listen: 0.0.0.0:1053

@@ -3,10 +3,10 @@
 . script/common.sh
 . script/clashctl.sh
 
-# 修改_valid_env函数调用，允许在zsh中运行
+# Modify _valid_env function call to allow running in zsh
 _valid_env
 
-[ -d "$CLASH_BASE_DIR" ] && _error_quit "请先执行卸载脚本,以清除安装路径：$CLASH_BASE_DIR"
+[ -d "$CLASH_BASE_DIR" ] && _error_quit "Please run the uninstall script first to clear the installation path: $CLASH_BASE_DIR"
 
 _get_kernel
 # shellcheck disable=SC2086
@@ -19,13 +19,13 @@ _get_kernel
 
 _set_bin "$RESOURCES_BIN_DIR"
 _valid_config "$RESOURCES_CONFIG" || {
-    prompt=$(_okcat '✈️ ' '输入订阅链接：')
+    prompt=$(_okcat '✈️ ' 'Enter subscription link:')
     read -p "$prompt" -r url
-    _okcat '⏳' '正在下载...'
-    _download_config "$RESOURCES_CONFIG" "$url" || _error_quit "下载失败: 请将配置内容写入 $RESOURCES_CONFIG 后重新安装"
-    _valid_config "$RESOURCES_CONFIG" || _error_quit "配置无效，请检查：$RESOURCES_CONFIG"
+    _okcat '⏳' 'Downloading...'
+    _download_config "$RESOURCES_CONFIG" "$url" || _error_quit "Download failed: Please write configuration content to $RESOURCES_CONFIG and reinstall"
+    _valid_config "$RESOURCES_CONFIG" || _error_quit "Invalid configuration, please check: $RESOURCES_CONFIG"
 }
-_okcat '✅' '配置可用'
+_okcat '✅' 'Configuration available'
 mkdir "$CLASH_BASE_DIR"
 echo "$url" >"$CLASH_CONFIG_URL"
 
@@ -56,9 +56,9 @@ echo # Move to a new line after user input
 
 # Conditionally enable the service based on user input
 if [[ "$enable_auto_start" =~ ^[Yy]$ ]]; then
-    systemctl enable "$BIN_KERNEL_NAME" >&/dev/null || _failcat '💥' "设置自启失败" && _okcat '🚀' "已设置开机自启"
+    systemctl enable "$BIN_KERNEL_NAME" >&/dev/null || _failcat '💥' "Failed to set auto-start" && _okcat '🚀' "Auto-start has been set"
 else
-    _okcat 'ℹ️' "自动启动未设置. 您可以稍后手动启用: sudo systemctl enable $BIN_KERNEL_NAME"
+    _okcat 'ℹ️' "Auto-start not set. You can enable it manually later: sudo systemctl enable $BIN_KERNEL_NAME"
 fi
 
 source /opt/clash/script/common.sh && source /opt/clash/script/clashctl.sh
